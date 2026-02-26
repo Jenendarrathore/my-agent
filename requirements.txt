@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+sqlalchemy[asyncio]
+asyncpg
+alembic
+arq
+redis[hiredis]
+pydantic-settings
+pydantic[email]
+python-dotenv
