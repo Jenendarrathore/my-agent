@@ -18,8 +18,21 @@ async def get_job(db: AsyncSession, id: int) -> Optional[Job]:
     return result.scalars().first()
 
 
-async def get_jobs(db: AsyncSession, skip: int = 0, limit: int = 100) -> List[Job]:
-    result = await db.execute(select(Job).offset(skip).limit(limit).order_by(Job.created_at.desc()))
+async def get_jobs(
+    db: AsyncSession, 
+    skip: int = 0, 
+    limit: int = 100,
+    status: Optional[str] = None,
+    job_type: Optional[str] = None
+) -> List[Job]:
+    query = select(Job)
+    if status:
+        query = query.where(Job.status == status)
+    if job_type:
+        query = query.where(Job.job_type == job_type)
+    
+    query = query.offset(skip).limit(limit).order_by(Job.created_at.desc())
+    result = await db.execute(query)
     return list(result.scalars().all())
 
 

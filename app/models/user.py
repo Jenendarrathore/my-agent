@@ -48,9 +48,6 @@ class User(Base):
     connected_accounts: Mapped[List["ConnectedAccount"]] = relationship(
         "ConnectedAccount", back_populates="user", cascade="all, delete-orphan"
     )
-    email_connections: Mapped[List["EmailConnection"]] = relationship(
-        "EmailConnection", back_populates="user", cascade="all, delete-orphan"
-    )
     emails: Mapped[List["Email"]] = relationship(
         "Email", back_populates="user", cascade="all, delete-orphan"
     )

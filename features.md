@@ -35,14 +35,17 @@ This document summarizes all the features currently implemented in the applicati
 - Filtering by date and amount (in CRUD logic).
 
 ### Connected Accounts (`/api/v1/connected-accounts`)
-- Link and manage external financial accounts.
-- Multi-account support per user.
+- **Unified Connection Model**: Centralized management of all external accounts (Email, Bank, etc.).
+- **Multi-Account Support**: Users can link multiple accounts per provider.
+- **Multi-Provider Framework**: Built-in support for **Gmail**, with architecture ready for **Outlook**, **IMAP**, and others.
 
 ## 4. Email & Job Management
-- **Email Processing**:
-    - Manage `EmailConnections` for various providers (Gmail, etc.).
-    - Automatic fetching and storage of `Emails`.
-    - `EmailExtraction` system for structured data parsing with versioning.
+- **Provider Framework**:
+    - **`ProviderFactory`**: Dynamically selects the correct email provider (Gmail, Outlook, etc.) at runtime.
+    - **Stateless Adapters**: Pluggable provider logic that handles OAuth2 or direct credentials.
+- **Email Pipeline**:
+    - Automatic background fetching and deduplication of `Emails`.
+    - **Content Extraction**: Structured data parsing (e.g., invoices, transactions) with versioned extraction logic.
 - **Background Jobs**:
     - Centralized `Job` tracking system (EMAIL_FETCH, EXTRACTION, etc.).
     - Status monitoring (QUEUED, RUNNING, SUCCESS, FAILED).

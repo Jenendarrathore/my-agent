@@ -1,0 +1,42 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Backend: FastAPI (Uvicorn)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "uvicorn",
+            "args": [
+                "app.main:app",
+                "--reload"
+            ],
+            "jit": true,
+            "justMyCode": true,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
+        },
+        {
+            "name": "Worker: Email Settings (ARQ)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "arq",
+            "args": [
+                "app.core.worker.email_settings.WorkerSettings"
+            ],
+            "justMyCode": false,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Backend + Worker",
+            "configurations": [
+                "Backend: FastAPI (Uvicorn)",
+                "Worker: Email Settings (ARQ)"
+            ]
+        }
+    ]
+}

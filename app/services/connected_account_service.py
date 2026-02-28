@@ -4,6 +4,9 @@ from app.crud import connected_account as crud
 from app.schemas.connected_account import ConnectedAccountCreate, ConnectedAccountUpdate, ConnectedAccountResponse
 
 
+from app.models.connected_account import ConnectedAccount
+
+
 class ConnectedAccountService:
     def __init__(self, db: AsyncSession):
         self.db = db
@@ -16,9 +19,17 @@ class ConnectedAccountService:
         db_obj = await crud.get_connected_account(self.db, account_id)
         return ConnectedAccountResponse.model_validate(db_obj) if db_obj else None
 
+    async def get_account_db(self, account_id: int) -> Optional[ConnectedAccount]:
+        """Internal use only: returns SQLAlchemy model with sensitive tokens."""
+        return await crud.get_connected_account(self.db, account_id)
+
     async def list_user_accounts(self, user_id: int) -> List[ConnectedAccountResponse]:
         db_objs = await crud.get_connected_accounts_by_user(self.db, user_id)
         return [ConnectedAccountResponse.model_validate(obj) for obj in db_objs]
+
+    async def list_user_accounts_db(self, user_id: int) -> List[ConnectedAccount]:
+        """Internal use only: returns SQLAlchemy models with sensitive tokens."""
+        return await crud.get_connected_accounts_by_user(self.db, user_id)
 
     async def update_account(self, account_id: int, account_in: ConnectedAccountUpdate) -> Optional[ConnectedAccountResponse]:
         db_obj = await crud.get_connected_account(self.db, account_id)

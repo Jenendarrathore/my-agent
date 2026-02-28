@@ -7,8 +7,31 @@ from app.schemas.job import JobCreate, JobUpdate, JobRead
 from app.services.job_service import JobService
 from app.dependencies.auth import get_current_user
 from app.models.user import User
+from app.services.task_service import TaskService
+from typing import Optional
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
+
+
+@router.post("/trigger/fetch", status_code=status.HTTP_202_ACCEPTED)
+async def trigger_email_fetch(
+    provider: str = "gmail",
+    limit: int = 20,
+    current_user: User = Depends(get_current_user)
+):
+    """Trigger a background job to fetch emails for the current user."""
+    await TaskService.enqueue_email_fetch(user_id=current_user.id, provider=provider, limit=limit)
+    return {"message": "Email fetch job enqueued"}
+
+
+@router.post("/trigger/extract", status_code=status.HTTP_202_ACCEPTED)
+async def trigger_email_extraction(
+    batch_size: int = 10,
+    current_user: User = Depends(get_current_user)
+):
+    """Trigger a background job to extract data from all pending emails."""
+    await TaskService.enqueue_email_extraction(batch_size=batch_size)
+    return {"message": "Email extraction job enqueued"}
 
 
 @router.post("/", response_model=JobRead, status_code=status.HTTP_201_CREATED)
@@ -26,11 +49,13 @@ async def create_job(
 async def read_jobs(
     skip: int = 0,
     limit: int = 100,
+    status: Optional[str] = None,
+    job_type: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     service = JobService(db)
-    return await service.list_jobs(skip=skip, limit=limit)
+    return await service.list_jobs(skip=skip, limit=limit, status=status, job_type=job_type)
 
 
 @router.get("/{job_id}", response_model=JobRead)

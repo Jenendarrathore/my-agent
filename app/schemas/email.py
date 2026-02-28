@@ -18,7 +18,7 @@ class EmailBase(BaseModel):
 
 class EmailCreate(EmailBase):
     user_id: int
-    email_connection_id: int
+    connected_account_id: int
 
 
 class EmailUpdate(BaseModel):
@@ -31,6 +31,6 @@ class EmailRead(EmailBase):
 
     id: int
     user_id: int
-    email_connection_id: int
+    connected_account_id: int
     fetched_at: datetime
     created_at: datetime

@@ -18,9 +18,13 @@ async def get_email(db: AsyncSession, id: int) -> Optional[Email]:
     return result.scalars().first()
 
 
-async def get_email_by_provider_id(db: AsyncSession, provider: str, provider_message_id: str) -> Optional[Email]:
+async def get_email_by_provider_id(db: AsyncSession, user_id: int, provider: str, provider_message_id: str) -> Optional[Email]:
     result = await db.execute(
-        select(Email).where(Email.provider == provider, Email.provider_message_id == provider_message_id)
+        select(Email).where(
+            Email.user_id == user_id,
+            Email.provider == provider, 
+            Email.provider_message_id == provider_message_id
+        )
     )
     return result.scalars().first()
 

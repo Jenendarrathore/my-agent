@@ -26,6 +26,13 @@ async def get_categories_by_user(db: AsyncSession, user_id: int) -> List[Categor
     return list(result.scalars().all())
 
 
+async def get_category_by_name(db: AsyncSession, user_id: int, name: str) -> Optional[Category]:
+    result = await db.execute(
+        select(Category).where(Category.user_id == user_id, Category.name == name)
+    )
+    return result.scalars().first()
+
+
 async def update_category(db: AsyncSession, db_category: Category, category_in: CategoryUpdate) -> Category:
     category_data = category_in.model_dump(exclude_unset=True)
     for field, value in category_data.items():

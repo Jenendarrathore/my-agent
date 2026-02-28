@@ -1,3 +1,19 @@
+from app.core.database import AsyncSessionLocal
+from app.jobs import JobRunner, EmailFetchJob, EmailExtractionJob
+
+async def run_email_fetch(ctx, user_id: int, provider: str = "gmail", limit: int = 20, account_id: int = None):
+    """ARQ Task: Fetch emails for a user."""
+    async with AsyncSessionLocal() as db:
+        runner = JobRunner(db)
+        payload = {"user_id": user_id, "provider": provider, "limit": limit, "account_id": account_id}
+        await runner.run_job(EmailFetchJob, "EMAIL_FETCH", payload, triggered_by="system")
+
+async def run_email_extraction(ctx, batch_size: int = 10):
+    """ARQ Task: Extract data from pending emails."""
+    async with AsyncSessionLocal() as db:
+        runner = JobRunner(db)
+        payload = {"batch_size": batch_size}
+        await runner.run_job(EmailExtractionJob, "EMAIL_EXTRACTION", payload, triggered_by="system")
 
 async def sample_task(ctx):
     """A sample base task."""

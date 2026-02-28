@@ -20,6 +20,10 @@ class CategoryService:
         db_objs = await crud.get_categories_by_user(self.db, user_id)
         return [CategoryResponse.model_validate(obj) for obj in db_objs]
 
+    async def get_category_by_name(self, user_id: int, name: str) -> Optional[CategoryResponse]:
+        db_obj = await crud.get_category_by_name(self.db, user_id, name)
+        return CategoryResponse.model_validate(db_obj) if db_obj else None
+
     async def update_category(self, category_id: int, category_in: CategoryUpdate) -> Optional[CategoryResponse]:
         db_obj = await crud.get_category(self.db, category_id)
         if not db_obj:

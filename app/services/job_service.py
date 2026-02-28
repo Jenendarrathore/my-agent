@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.crud import job as crud
 from app.schemas.job import JobCreate, JobUpdate, JobRead
@@ -12,12 +12,23 @@ class JobService:
         db_obj = await crud.create_job(self.db, job_in)
         return JobRead.model_validate(db_obj)
 
+    async def create_job_raw(self, **kwargs) -> Any:
+        # Internal helper to create a job and return the model instance
+        job_in = JobCreate(**kwargs)
+        return await crud.create_job(self.db, job_in)
+
     async def get_job(self, id: int) -> Optional[JobRead]:
         db_obj = await crud.get_job(self.db, id)
         return JobRead.model_validate(db_obj) if db_obj else None
 
-    async def list_jobs(self, skip: int = 0, limit: int = 100) -> List[JobRead]:
-        db_objs = await crud.get_jobs(self.db, skip, limit)
+    async def list_jobs(
+        self, 
+        skip: int = 0, 
+        limit: int = 100,
+        status: Optional[str] = None,
+        job_type: Optional[str] = None
+    ) -> List[JobRead]:
+        db_objs = await crud.get_jobs(self.db, skip, limit, status, job_type)
         return [JobRead.model_validate(obj) for obj in db_objs]
 
     async def update_job(self, id: int, job_in: JobUpdate) -> Optional[JobRead]:

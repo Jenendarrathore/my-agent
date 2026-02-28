@@ -15,6 +15,7 @@ The project is organized to ensure a strict separation between infrastructure (h
 | **`app/schemas/`** | Data validation and API serialization. | Pydantic V2 |
 | **`app/services/`** | Reusable business logic & Orchestration (brain). | Python Async |
 | **`app/crud/`** | Pure database operations (data access). | SQLAlchemy |
+| **`app/email/providers/`** | Stateless adapters for external email services. | Provider Factory Pattern |
 | **`app/workers/`** | Background job logic (functions). | ARQ Jobs |
 
 ---
@@ -43,7 +44,8 @@ We utilize Redis database indices to ensure total isolation between queues:
 
 ### Specialized Worker Configuration
 Each worker process has its own settings in `app/core/worker/`. This is critical for **Scalability**:
-- You can run multiple instances of the `email_worker` without them competing for the same jobs as the `base_worker`.
+- **Base Worker**: Handles `EmailFetchJob` and `EmailExtractionJob` (using LLMs).
+- **Email Worker**: Dedicated to system notifications and OTP delivery.
 - Each worker only loads the functions it is responsible for, reducing memory overhead.
 
 ---
@@ -113,4 +115,13 @@ await queue.report_pool.enqueue_job("generate_report", report_id=123)
 ## 5. Development & Deployment
 - **Docker Compose**: Automatically starts the API and both workers as separate containers.
 - **Migrations**: Uses `alembic` with an async environment to manage PostgreSQL changes.
+- **OAuth2 Setup**: Requires `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `.env`.
 - **Scaling**: In production, you can scale each worker service independently in your orchestrator (e.g., Kubernetes or Docker Swarm).
+
+---
+
+## 6. Provider Registration
+The system uses a `ProviderFactory` to manage different email integrations. To add a new provider:
+1. Implement the `EmailProvider` interface in `app/email/providers/`.
+2. Register the provider in `app/email/providers/factory.py`.
+3. Update `ProviderEnum` in `app/models/connected_account.py`.

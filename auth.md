@@ -26,6 +26,10 @@ Standard Role-Based Access Control (RBAC) table.
 - `refresh_token_expiry`: Timestamp (Expiry for the refresh token)
 - `created_at`: Timestamp (Timezone aware)
 
+**Relationships:**
+- `connected_accounts`: One-to-Many relationship with `ConnectedAccount`.
+- `emails`: One-to-Many relationship with `Email` (direct link for easy querying).
+
 ---
 
 ## 2. Security Infrastructure
@@ -93,7 +97,25 @@ To ensure compatibility and security, the following versions are pinned in `requ
 
 ---
 
-## 4. Route Protection (`app/dependencies/auth.py`)
+## 4. Google OAuth2 Integration (`app/api/v1/google_auth.py` && `app/api/v1/connected_accounts.py`)
+
+The application supports connecting accounts via a unified authorization flow.
+
+### Flow Overview
+1.  **Authorize**: User is redirected to `GET /api/v1/connected-accounts/{account_id}/authorize`.
+2.  **Provider Specific Logic**: The backend identifies the provider (e.g., Gmail) and generates the correct OAuth2 URL.
+3.  **Consent**: User grants permissions on the provider's consent screen.
+4.  **Callback**: Provider redirects to the specific callback endpoint (e.g., `GET /api/v1/auth/google/callback`).
+5.  **Persistence**: Tokens and scopes are saved to the corresponding `ConnectedAccount` record.
+
+### Security
+- **Dynamic Scopes**: Requested scopes include `openid`, `email`, and `https://www.googleapis.com/auth/gmail.readonly`.
+- **State Protection**: Google's built-in state mechanism is used (where applicable) to prevent CSRF.
+- **Token Security**: Refresh tokens are stored securely to allow long-term background fetching without user intervention.
+
+---
+
+## 6. Route Protection (`app/dependencies/auth.py`)
 
 ### `get_current_user` Dependency
 This dependency protects routes and provides the authenticated user context.
@@ -153,6 +175,6 @@ As a developer, you can test the forgot password flow without a real email serve
       ```
 4.  **Verify**: Log in with the new password via `POST /api/auth/login`.
 
-| API Routes | [auth.py](file:///opt/gitco/ai/my-agent/app/api/auth.py) |
+| API Routes | [auth.py](file:///opt/gitco/ai/my-agent/app/api/auth.py), [google_auth.py](file:///opt/gitco/ai/my-agent/app/api/v1/google_auth.py) |
 | Feature List | [features.md](file:///opt/gitco/ai/my-agent/features.md) |
 | Developer Guide | [DEVELOPMENT.md](file:///opt/gitco/ai/my-agent/DEVELOPMENT.md) |

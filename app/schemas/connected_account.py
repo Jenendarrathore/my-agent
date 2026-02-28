@@ -12,9 +12,9 @@ class ConnectedAccountBase(BaseModel):
 
 class ConnectedAccountCreate(ConnectedAccountBase):
     user_id: Optional[int] = None
-    access_token: str
-    refresh_token: str
-    token_expiry: datetime
+    access_token: Optional[str] = None
+    refresh_token: Optional[str] = None
+    token_expiry: Optional[datetime] = None
 
 
 class ConnectedAccountUpdate(BaseModel):
@@ -27,7 +27,7 @@ class ConnectedAccountUpdate(BaseModel):
 class ConnectedAccountResponse(ConnectedAccountBase):
     id: int
     user_id: int
-    token_expiry: datetime
+    token_expiry: Optional[datetime] = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

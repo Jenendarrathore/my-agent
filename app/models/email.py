@@ -10,7 +10,7 @@ class Email(Base):
 
     id: Mapped[int] = mapped_column("id", autoincrement=True, nullable=False, unique=True, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
-    email_connection_id: Mapped[int] = mapped_column(ForeignKey("email_connections.id"), nullable=False)
+    connected_account_id: Mapped[int] = mapped_column(ForeignKey("connected_accounts.id"), nullable=False)
     
     provider: Mapped[str] = mapped_column(String, nullable=False)
     provider_message_id: Mapped[str] = mapped_column(String, nullable=False)
@@ -42,5 +42,5 @@ class Email(Base):
     )
 
     user: Mapped["User"] = relationship("User", back_populates="emails")
-    email_connection: Mapped["EmailConnection"] = relationship("EmailConnection", back_populates="emails")
+    connected_account: Mapped["ConnectedAccount"] = relationship("ConnectedAccount", back_populates="emails")
     extractions: Mapped[List["EmailExtraction"]] = relationship("EmailExtraction", back_populates="email", cascade="all, delete-orphan")

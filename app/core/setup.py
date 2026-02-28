@@ -64,6 +64,16 @@ def create_application(router: APIRouter, **kwargs: Any) -> FastAPI:
     
     application = FastAPI(**app_configs)
     
+    # Enable CORS
+    from fastapi.middleware.cors import CORSMiddleware
+    application.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"], # In production, replace with specific origins
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    
     # Include the main router
     application.include_router(router)
     
