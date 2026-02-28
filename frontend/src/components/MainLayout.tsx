@@ -2,6 +2,7 @@ import * as React from "react";
 import { Link, useLocation, useNavigate, Outlet } from "react-router-dom";
 import {
     LayoutDashboard,
+    Mail,
     Settings,
     Link as LinkIcon,
     ChevronLeft,
@@ -16,8 +17,20 @@ import { Button, cn } from "./ui";
 
 export function MainLayout() {
     const [isCollapsed, setIsCollapsed] = React.useState(false);
+    const [user, setUser] = React.useState<any>(null);
     const location = useLocation();
     const navigate = useNavigate();
+
+    React.useEffect(() => {
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+            try {
+                setUser(JSON.parse(storedUser));
+            } catch (e) {
+                console.error("Failed to parse user", e);
+            }
+        }
+    }, []);
 
     const handleLogout = () => {
         localStorage.removeItem("access_token");
@@ -27,33 +40,45 @@ export function MainLayout() {
 
     const navItems = [
         { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
-        { icon: LinkIcon, label: "Connected Accounts", path: "/connected-accounts" },
+        { icon: Mail, label: "Emails", path: "/emails" },
+        { icon: LinkIcon, label: "Connections", path: "/connected-accounts" },
         { icon: Activity, label: "Jobs", path: "/jobs" },
         { icon: CreditCard, label: "Transactions", path: "/transactions" },
-        { icon: History, label: "Activity", path: "/activity" },
+        { icon: History, label: "Activity Log", path: "/activity" },
         { icon: Settings, label: "Settings", path: "/settings" },
     ];
 
     return (
-        <div className="flex min-h-screen bg-slate-50 transition-colors duration-300">
+        <div className="flex min-h-screen bg-background text-foreground">
             {/* Sidebar */}
             <aside
                 className={cn(
-                    "bg-white border-r border-slate-200 flex flex-col transition-all duration-300 ease-in-out z-30",
-                    isCollapsed ? "w-20" : "w-72"
+                    "border-r border-border bg-card flex flex-col transition-all duration-300 ease-in-out z-30 relative",
+                    isCollapsed ? "w-16" : "w-64"
                 )}
             >
                 <div className="p-6 flex items-center justify-between">
                     {!isCollapsed && (
-                        <div className="flex items-center gap-2 animate-in fade-in zoom-in duration-300">
-                            <ShieldCheck className="w-8 h-8 text-primary shrink-0" />
-                            <span className="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent italic">FinAgênt</span>
+                        <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+                                <ShieldCheck className="w-5 h-5 text-primary-foreground" />
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-xl font-bold tracking-tight text-foreground">Financial Agent</span>
+                                {user?.role?.name === "admin" && (
+                                    <span className="text-[10px] font-bold text-primary uppercase tracking-widest leading-none">Admin Level</span>
+                                )}
+                            </div>
                         </div>
                     )}
-                    {isCollapsed && <ShieldCheck className="w-8 h-8 text-primary mx-auto" />}
+                    {isCollapsed && (
+                        <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center mx-auto">
+                            <ShieldCheck className="w-5 h-5 text-primary-foreground" />
+                        </div>
+                    )}
                 </div>
 
-                <nav className="flex-1 px-4 space-y-2 mt-4">
+                <nav className="flex-1 px-3 space-y-1 mt-6">
                     {navItems.map((item) => {
                         const isActive = location.pathname === item.path;
                         const Icon = item.icon;
@@ -62,52 +87,47 @@ export function MainLayout() {
                             <Link
                                 key={item.path}
                                 to={item.path}
+                                title={isCollapsed ? item.label : ""}
                                 className={cn(
-                                    "flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 group relative",
+                                    "flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors group",
                                     isActive
-                                        ? "bg-primary text-primary-foreground shadow-md"
-                                        : "text-slate-600 hover:bg-slate-100"
+                                        ? "bg-secondary text-secondary-foreground"
+                                        : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
                                 )}
                             >
-                                <Icon className={cn("w-5 h-5 shrink-0", isActive ? "text-white" : "text-slate-500 group-hover:text-primary")} />
+                                <Icon className={cn("w-5 h-5 shrink-0", isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
                                 {!isCollapsed && (
-                                    <span className="font-semibold text-sm animate-in fade-in slide-in-from-left-2 duration-300">
+                                    <span className="text-sm font-medium">
                                         {item.label}
                                     </span>
-                                )}
-                                {isCollapsed && (
-                                    <div className="absolute left-full ml-4 px-2 py-1 bg-slate-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 whitespace-nowrap">
-                                        {item.label}
-                                    </div>
                                 )}
                             </Link>
                         );
                     })}
                 </nav>
 
-                <div className="p-4 border-t border-slate-100 space-y-2">
+                <div className="p-4 border-t border-border space-y-2">
                     <Button
                         variant="ghost"
-                        className={cn("w-full justify-start text-slate-600 hover:text-destructive", isCollapsed && "justify-center")}
+                        size="sm"
+                        className={cn("w-full justify-start text-muted-foreground hover:text-destructive hover:bg-destructive/10", isCollapsed && "justify-center px-0")}
                         onClick={handleLogout}
                     >
-                        <LogOut className="w-5 h-5 shrink-0" />
-                        {!isCollapsed && <span className="ml-3 font-semibold">Logout</span>}
+                        <LogOut className="w-4 h-4 shrink-0" />
+                        {!isCollapsed && <span className="ml-2 font-medium">Log out</span>}
                     </Button>
 
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="w-full justify-center text-slate-400 hover:text-slate-600"
+                    <button
+                        className="w-full flex items-center justify-center py-2 text-muted-foreground hover:text-foreground transition-colors"
                         onClick={() => setIsCollapsed(!isCollapsed)}
                     >
-                        {isCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
-                    </Button>
+                        {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+                    </button>
                 </div>
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 h-screen overflow-y-auto overflow-x-hidden">
+            <main className="flex-1 h-screen overflow-y-auto">
                 <div className="p-8 max-w-6xl mx-auto">
                     <Outlet />
                 </div>

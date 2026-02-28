@@ -29,13 +29,13 @@ async def get_email_by_provider_id(db: AsyncSession, user_id: int, provider: str
     return result.scalars().first()
 
 
-async def get_emails_by_user(db: AsyncSession, user_id: int, skip: int = 0, limit: int = 100) -> List[Email]:
-    result = await db.execute(
-        select(Email)
-        .where(Email.user_id == user_id)
-        .offset(skip)
-        .limit(limit)
-    )
+async def get_emails_by_user(db: AsyncSession, user_id: Optional[int] = None, skip: int = 0, limit: int = 100) -> List[Email]:
+    query = select(Email)
+    if user_id is not None:
+        query = query.where(Email.user_id == user_id)
+    
+    query = query.offset(skip).limit(limit).order_by(Email.received_at.desc())
+    result = await db.execute(query)
     return list(result.scalars().all())
 
 

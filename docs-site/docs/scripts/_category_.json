@@ -1,0 +1,8 @@
+{
+    "label": "🛠️ Scripts",
+    "position": 7,
+    "link": {
+        "type": "generated-index",
+        "description": "All available utility and test scripts."
+    }
+}

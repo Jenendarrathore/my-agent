@@ -7,6 +7,7 @@ class JobBase(BaseModel):
     job_type: str
     status: str = "QUEUED"
     triggered_by: str
+    user_id: Optional[int] = None
     input_payload: Optional[Any] = None
     output_payload: Optional[Any] = None
     error_payload: Optional[Any] = None

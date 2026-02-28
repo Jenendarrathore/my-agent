@@ -22,6 +22,7 @@ class UserBase(BaseModel):
 
 
 class UserRegister(UserBase):
+    name: Optional[str] = None
     password: str
 
 

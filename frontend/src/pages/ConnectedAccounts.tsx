@@ -1,6 +1,27 @@
 import * as React from "react";
-import { Mail, Plus, Trash2, ShieldCheck, ExternalLink, ShieldAlert, Loader2, DownloadCloud } from "lucide-react";
-import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, Input, cn } from "../components/ui";
+import {
+    Mail,
+    Plus,
+    Trash2,
+    ShieldCheck,
+    ShieldAlert,
+    Loader2,
+    DownloadCloud,
+    ExternalLink
+} from "lucide-react";
+import {
+    Button,
+    Card,
+    CardHeader,
+    CardTitle,
+    CardDescription,
+    CardContent,
+    CardFooter,
+    Input,
+    Badge,
+    useToast,
+    cn
+} from "../components/ui";
 
 interface ConnectedAccount {
     id: number;
@@ -16,7 +37,8 @@ export function ConnectedAccounts() {
     const [isAdding, setIsAdding] = React.useState(false);
     const [newEmail, setNewEmail] = React.useState("");
     const [newProvider, setNewProvider] = React.useState("gmail");
-    const [error, setError] = React.useState("");
+    const [isSubmitting, setIsSubmitting] = React.useState(false);
+    const { addToast } = useToast();
 
     const fetchAccounts = React.useCallback(async () => {
         try {
@@ -41,7 +63,7 @@ export function ConnectedAccounts() {
 
     const handleAddAccount = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError("");
+        setIsSubmitting(true);
         try {
             const token = localStorage.getItem("access_token");
             const res = await fetch("/api/v1/connected-accounts/", {
@@ -56,24 +78,28 @@ export function ConnectedAccounts() {
                 })
             });
             if (res.ok) {
+                addToast("New account connected successfully.", "success");
                 setNewEmail("");
                 setIsAdding(false);
                 fetchAccounts();
             } else {
                 const data = await res.json();
-                setError(data.detail || "Failed to add account");
+                addToast(data.detail || "Connection failed.", "error");
             }
         } catch (err) {
-            setError("Something went wrong");
+            addToast("Failed to connect account.", "error");
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
     const handleConnectOAuth = async (account: ConnectedAccount) => {
         if (account.provider !== 'gmail') {
-            alert(`${account.provider.toUpperCase()} integration is coming soon!`);
+            addToast(`${account.provider.toUpperCase()} integration is coming soon.`, "info");
             return;
         }
         try {
+            addToast("Redirecting to authorization...", "info");
             const token = localStorage.getItem("access_token");
             const res = await fetch(`/api/v1/connected-accounts/${account.id}/authorize`, {
                 headers: { Authorization: `Bearer ${token}` }
@@ -83,12 +109,13 @@ export function ConnectedAccounts() {
                 window.location.href = data.authorization_url;
             }
         } catch (err) {
-            console.error("Failed to start OAuth", err);
+            addToast("Failed to reach authorization portal.", "error");
         }
     };
 
     const handleImport = async (accountId: number) => {
         try {
+            addToast("Batch fetch triggered.", "info");
             const token = localStorage.getItem("access_token");
             const res = await fetch(`/api/v1/connected-accounts/${accountId}/fetch?limit=10`, {
                 method: "POST",
@@ -96,12 +123,12 @@ export function ConnectedAccounts() {
             });
             const data = await res.json();
             if (res.ok) {
-                alert(data.message);
+                addToast("Inporting latest transactions...", "success");
             } else {
-                alert(`Error: ${data.detail || 'Failed to trigger fetch'}`);
+                addToast(data.detail || "Import failed.", "error");
             }
         } catch (err) {
-            console.error("Failed to trigger import", err);
+            addToast("Connection error.", "error");
         }
     };
 
@@ -109,153 +136,158 @@ export function ConnectedAccounts() {
         if (!confirm("Are you sure you want to disconnect this account?")) return;
         try {
             const token = localStorage.getItem("access_token");
-            await fetch(`/api/v1/connected-accounts/${accountId}`, {
+            const res = await fetch(`/api/v1/connected-accounts/${accountId}`, {
                 method: "DELETE",
                 headers: { Authorization: `Bearer ${token}` }
             });
-            fetchAccounts();
+            if (res.ok) {
+                addToast("Account disconnected.", "success");
+                fetchAccounts();
+            } else {
+                addToast("Disconnection failed.", "error");
+            }
         } catch (err) {
-            console.error("Failed to delete account", err);
+            addToast("Network error.", "error");
         }
     };
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
             <div className="flex justify-between items-end">
-                <div className="space-y-2">
-                    <h1 className="text-4xl font-bold tracking-tight text-slate-900 italic">Connected Accounts</h1>
-                    <p className="text-slate-500 text-lg">Manage your email sources and financial connections.</p>
+                <div className="space-y-1">
+                    <h1 className="text-3xl font-bold tracking-tight text-foreground">Account Connections</h1>
+                    <p className="text-muted-foreground">Link your financial data sources for automated processing.</p>
                 </div>
-                <Button onClick={() => setIsAdding(true)} size="lg" className="shadow-md hover:scale-105 transition-transform">
-                    <Plus className="w-5 h-5 mr-2" />
-                    Add Account
+                <Button onClick={() => setIsAdding(true)} size="default" className="font-semibold">
+                    <Plus className="w-4 h-4 mr-2" />
+                    New Connection
                 </Button>
             </div>
 
             {isAdding && (
-                <Card className="border-primary shadow-xl animate-in slide-in-from-top-4 duration-300 overflow-hidden">
-                    <div className="h-1 bg-primary animate-pulse" />
+                <Card className="animate-in slide-in-from-top-4 duration-300">
                     <CardHeader>
-                        <CardTitle>Register New Source</CardTitle>
-                        <CardDescription>Select a provider and enter the email address you want to connect.</CardDescription>
+                        <CardTitle className="text-xl">Connect New Account</CardTitle>
+                        <CardDescription>Select a provider and enter the email address you wish to synchronize.</CardDescription>
                     </CardHeader>
                     <form onSubmit={handleAddAccount}>
                         <CardContent className="space-y-6">
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <label className="text-sm font-bold text-slate-700">Provider</label>
+                                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Provider</label>
                                     <select
-                                        className="w-full flex h-12 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2"
+                                        className="w-full flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                                         value={newProvider}
                                         onChange={(e) => setNewProvider(e.target.value)}
                                     >
-                                        <option value="gmail">Gmail</option>
+                                        <option value="gmail">Google (Gmail)</option>
                                         <option value="outlook">Outlook</option>
                                         <option value="imap">IMAP</option>
-                                        <option value="other">Other</option>
                                     </select>
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-sm font-bold text-slate-700">Email Address</label>
+                                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Email Address</label>
                                     <Input
-                                        placeholder="account@example.com"
+                                        placeholder="user@example.com"
                                         type="email"
                                         value={newEmail}
                                         onChange={(e) => setNewEmail(e.target.value)}
                                         required
-                                        className="h-12"
                                     />
                                 </div>
                             </div>
-                            {error && <p className="text-sm text-destructive font-medium bg-destructive/10 p-3 rounded-lg border border-destructive/20">{error}</p>}
                         </CardContent>
-                        <CardFooter className="gap-3 bg-slate-50/50 p-6">
-                            <Button type="submit" size="lg">Save & Continue</Button>
-                            <Button variant="outline" size="lg" onClick={() => setIsAdding(false)}>Cancel</Button>
+                        <CardFooter className="gap-2 bg-muted/30 p-4 border-t border-border">
+                            <Button type="submit" disabled={isSubmitting} size="sm">
+                                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                                Save Connection
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => setIsAdding(false)}>Cancel</Button>
                         </CardFooter>
                     </form>
                 </Card>
             )}
 
             {loading ? (
-                <div className="flex justify-center p-12">
-                    <Loader2 className="w-12 h-12 animate-spin text-primary/30" />
+                <div className="flex flex-col items-center justify-center p-24 text-muted-foreground opacity-50">
+                    <Loader2 className="w-8 h-8 animate-spin mb-4" />
+                    <p className="text-xs font-semibold uppercase tracking-widest">Fetching connections...</p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 gap-6">
+                <div className="grid grid-cols-1 gap-4">
                     {accounts.length === 0 ? (
-                        <div className="text-center p-20 bg-white rounded-2xl border-2 border-dashed border-slate-200 animate-in zoom-in duration-500">
-                            <Mail className="w-16 h-16 text-slate-200 mx-auto mb-4" />
-                            <h3 className="text-xl font-semibold text-slate-900">No sources yet</h3>
-                            <p className="text-slate-500 mt-2">Add an email account to start syncing transactions.</p>
-                            <Button variant="outline" className="mt-6" onClick={() => setIsAdding(true)}>
-                                Get Started
+                        <div className="flex flex-col items-center justify-center p-24 border-2 border-dashed border-border rounded-lg text-center gap-4">
+                            <Mail className="w-12 h-12 text-muted-foreground opacity-20" />
+                            <div className="space-y-1">
+                                <h3 className="text-lg font-semibold text-foreground">No Connections Yet</h3>
+                                <p className="text-sm text-muted-foreground max-w-xs mx-auto">Start by adding an email account to initialize automated transaction processing.</p>
+                            </div>
+                            <Button variant="outline" className="mt-2" onClick={() => setIsAdding(true)}>
+                                Add Your First Account
                             </Button>
                         </div>
                     ) : (
                         accounts.map(account => (
-                            <Card key={account.id} className="hover:shadow-lg transition-all duration-300 border-none group">
-                                <CardContent className="p-8 flex items-center justify-between">
+                            <Card key={account.id} className="hover:border-primary/30 transition-colors">
+                                <CardContent className="p-6 flex items-center justify-between">
                                     <div className="flex items-center gap-6">
                                         <div className={cn(
-                                            "p-4 rounded-2xl transition-colors duration-300",
-                                            account.token_expiry ? 'bg-green-100/50 group-hover:bg-green-100' : 'bg-amber-100/50 group-hover:bg-amber-100'
+                                            "w-12 h-12 rounded-lg flex items-center justify-center",
+                                            account.token_expiry ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400' : 'bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400'
                                         )}>
-                                            <Mail className={cn(
-                                                "w-7 h-7",
-                                                account.token_expiry ? 'text-green-600' : 'text-amber-600'
-                                            )} />
+                                            <Mail className="w-6 h-6" />
                                         </div>
                                         <div>
-                                            <p className="font-bold text-xl text-slate-900">{account.email}</p>
+                                            <p className="font-bold text-lg text-foreground">{account.email}</p>
                                             <div className="flex items-center gap-3 mt-1">
-                                                <span className="text-xs uppercase font-extrabold text-slate-400 tracking-wider">
+                                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                                                     {account.provider}
                                                 </span>
+                                                <div className="w-1 h-1 rounded-full bg-border" />
                                                 {account.token_expiry ? (
-                                                    <span className="flex items-center gap-1.5 text-xs text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded-full border border-green-200">
-                                                        <ShieldCheck className="w-3 h-3" />
-                                                        ACTIVE
-                                                    </span>
+                                                    <Badge variant="success" className="h-5 px-2">
+                                                        <ShieldCheck className="w-3 h-3 mr-1" />
+                                                        Active
+                                                    </Badge>
                                                 ) : (
-                                                    <span className="flex items-center gap-1.5 text-xs text-amber-600 font-bold bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
-                                                        <ShieldAlert className="w-3 h-3" />
-                                                        MISSING AUTH
-                                                    </span>
+                                                    <Badge variant="warning" className="h-5 px-2">
+                                                        <ShieldAlert className="w-3 h-3 mr-1" />
+                                                        Auth Required
+                                                    </Badge>
                                                 )}
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-2">
                                         {account.token_expiry && (
                                             <Button
                                                 variant="outline"
-                                                size="default"
-                                                className="border-primary text-primary hover:bg-primary/5 font-semibold"
+                                                size="sm"
                                                 onClick={() => handleImport(account.id)}
+                                                className="text-xs h-9"
                                             >
-                                                <DownloadCloud className="w-4 h-4 mr-2" />
-                                                Import Last 10
+                                                <DownloadCloud className="w-3.5 h-3.5 mr-2" />
+                                                Import Data
                                             </Button>
                                         )}
                                         {!account.token_expiry && (
                                             <Button
-                                                size="lg"
+                                                size="sm"
                                                 onClick={() => handleConnectOAuth(account)}
-                                                className={cn("shadow-md", account.provider !== 'gmail' && "opacity-50 grayscale cursor-not-allowed")}
-                                                variant={account.provider !== 'gmail' ? 'outline' : 'primary'}
+                                                className={cn("text-xs h-9", account.provider !== 'gmail' && "opacity-50 grayscale cursor-not-allowed")}
+                                                variant={account.provider === 'gmail' ? 'primary' : 'outline'}
                                             >
-                                                <ExternalLink className="w-4 h-4 mr-2" />
-                                                {account.provider === 'gmail' ? 'Authorize Now' : 'Coming Soon'}
+                                                Authorize
+                                                <ExternalLink className="w-3.5 h-3.5 ml-2" />
                                             </Button>
                                         )}
                                         <Button
-                                            variant="outline"
+                                            variant="ghost"
                                             size="icon"
-                                            className="w-12 h-12 text-slate-400 hover:text-destructive hover:bg-destructive/10 border-slate-200"
+                                            className="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                                             onClick={() => handleDelete(account.id)}
                                         >
-                                            <Trash2 className="w-5 h-5" />
+                                            <Trash2 className="w-4 h-4" />
                                         </Button>
                                     </div>
                                 </CardContent>

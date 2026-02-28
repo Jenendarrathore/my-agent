@@ -55,7 +55,8 @@ async def read_jobs(
     current_user: User = Depends(get_current_user)
 ):
     service = JobService(db)
-    return await service.list_jobs(skip=skip, limit=limit, status=status, job_type=job_type)
+    user_id = None if current_user.role.name == "admin" else current_user.id
+    return await service.list_jobs(skip=skip, limit=limit, status=status, job_type=job_type, user_id=user_id)
 
 
 @router.get("/{job_id}", response_model=JobRead)

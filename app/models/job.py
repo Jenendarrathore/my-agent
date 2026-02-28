@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from typing import Optional, Any, List
-from sqlalchemy import String, DateTime, text, JSON, Integer
+from sqlalchemy import String, DateTime, text, JSON, Integer, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
 
@@ -9,6 +9,7 @@ class Job(Base):
     __tablename__ = "jobs"
 
     id: Mapped[int] = mapped_column("id", autoincrement=True, nullable=False, unique=True, primary_key=True)
+    user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     
     job_type: Mapped[str] = mapped_column(String, nullable=False)  # EMAIL_FETCH, EMAIL_EXTRACTION, EMAIL_REPROCESS
     status: Mapped[str] = mapped_column(String, default="QUEUED", nullable=False)  # QUEUED, RUNNING, SUCCESS, FAILED, CANCELLED
@@ -30,3 +31,4 @@ class Job(Base):
     )
 
     llm_transactions: Mapped[List["LLMTransaction"]] = relationship("LLMTransaction", back_populates="job", cascade="all, delete-orphan")
+    user: Mapped[Optional["User"]] = relationship("User")

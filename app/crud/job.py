@@ -23,13 +23,16 @@ async def get_jobs(
     skip: int = 0, 
     limit: int = 100,
     status: Optional[str] = None,
-    job_type: Optional[str] = None
+    job_type: Optional[str] = None,
+    user_id: Optional[int] = None
 ) -> List[Job]:
     query = select(Job)
     if status:
         query = query.where(Job.status == status)
     if job_type:
         query = query.where(Job.job_type == job_type)
+    if user_id:
+        query = query.where(Job.user_id == user_id)
     
     query = query.offset(skip).limit(limit).order_by(Job.created_at.desc())
     result = await db.execute(query)

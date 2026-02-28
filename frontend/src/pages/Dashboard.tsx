@@ -1,7 +1,22 @@
 import * as React from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Button, Card, CardHeader, CardTitle, CardContent } from "../components/ui";
-import { Mail, AlertCircle, CheckCircle2, Plus } from "lucide-react";
+import {
+    Button,
+    Card,
+    CardHeader,
+    CardTitle,
+    CardContent,
+    Badge
+} from "../components/ui";
+import {
+    Mail,
+    AlertCircle,
+    CheckCircle2,
+    Plus,
+    Zap,
+    ArrowRight,
+    Activity
+} from "lucide-react";
 
 export function Dashboard() {
     const [searchParams] = useSearchParams();
@@ -35,83 +50,96 @@ export function Dashboard() {
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
             <div className="flex justify-between items-end">
-                <div className="space-y-2">
-                    <h1 className="text-4xl font-bold tracking-tight text-slate-900 italic">Financial Dashboard</h1>
-                    <p className="text-slate-500 text-lg">Your automated financial intelligence hub.</p>
+                <div className="space-y-1">
+                    <h1 className="text-3xl font-bold tracking-tight text-foreground">Dashboard</h1>
+                    <p className="text-muted-foreground">Overview of your connected accounts and sync status.</p>
+                </div>
+                <div className="flex gap-2">
+                    <Badge variant="success" className="h-8">
+                        System Online
+                    </Badge>
                 </div>
             </div>
 
             {status === "success" && (
-                <div className="flex items-center gap-3 p-4 bg-green-50 text-green-700 rounded-xl border border-green-100 animate-in fade-in slide-in-from-top-2">
+                <div className="flex items-center gap-3 p-4 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-100 animate-in slide-in-from-top-2 duration-300 dark:bg-emerald-900/10 dark:text-emerald-400 dark:border-emerald-800/30">
                     <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
-                    <span className="font-medium">Account {provider} connected successfully!</span>
+                    <span className="font-medium text-sm">Account {provider} connected successfully.</span>
                 </div>
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card className="shadow-lg border-none bg-white p-6 flex flex-col justify-between hover:scale-[1.02] transition-transform">
-                    <div className="space-y-4">
-                        <div className="p-3 bg-blue-50 w-fit rounded-xl">
-                            <Mail className="w-6 h-6 text-blue-600" />
-                        </div>
-                        <div>
-                            <h3 className="text-lg font-semibold text-slate-900">Connected Accounts</h3>
-                            <p className="text-3xl font-bold text-primary">{connectedCount}</p>
-                        </div>
-                    </div>
-                    <Button
-                        variant="link"
-                        className="px-0 w-fit h-auto mt-4 text-primary font-semibold"
-                        onClick={() => navigate("/connected-accounts")}
-                    >
-                        Manage Sources →
-                    </Button>
+                {/* Metric 1 */}
+                <Card className="hover:border-primary/50 transition-colors">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">Connected Accounts</CardTitle>
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{connectedCount}</div>
+                        <p className="text-xs text-muted-foreground mt-1">Active data sources</p>
+                        <Button
+                            variant="link"
+                            size="sm"
+                            className="p-0 h-auto mt-4 text-xs font-semibold"
+                            onClick={() => navigate("/connected-accounts")}
+                        >
+                            View All <ArrowRight className="w-3 h-3 ml-1" />
+                        </Button>
+                    </CardContent>
                 </Card>
 
-                <Card className="shadow-lg border-none bg-white p-6 flex flex-col justify-between hover:scale-[1.02] transition-transform">
-                    <div className="space-y-4">
-                        <div className="p-3 bg-amber-50 w-fit rounded-xl">
-                            <AlertCircle className="w-6 h-6 text-amber-600" />
-                        </div>
-                        <div>
-                            <h3 className="text-lg font-semibold text-slate-900">Pending Authorization</h3>
-                            <p className="text-3xl font-bold text-amber-600">{pendingCount}</p>
-                        </div>
-                    </div>
-                    <Button
-                        variant="link"
-                        className="px-0 w-fit h-auto mt-4 text-amber-600 font-semibold"
-                        onClick={() => navigate("/connected-accounts")}
-                    >
-                        Review Pending →
-                    </Button>
+                {/* Metric 2 */}
+                <Card className="hover:border-amber-500/50 transition-colors">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">Pending Auth</CardTitle>
+                        <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{pendingCount}</div>
+                        <p className="text-xs text-muted-foreground mt-1">Needs attention</p>
+                        <Button
+                            variant="link"
+                            size="sm"
+                            className="p-0 h-auto mt-4 text-xs font-semibold text-amber-600 dark:text-amber-500"
+                            onClick={() => navigate("/connected-accounts")}
+                        >
+                            Resolve Now <ArrowRight className="w-3 h-3 ml-1" />
+                        </Button>
+                    </CardContent>
                 </Card>
 
-                <Card className="shadow-lg border-none bg-gradient-to-br from-primary to-primary/80 text-primary-foreground p-6 hover:scale-[1.02] transition-transform">
-                    <div className="h-full flex flex-col justify-between">
-                        <h3 className="text-xl font-bold">Quick Actions</h3>
-                        <div className="space-y-3 mt-4">
-                            <Button
-                                className="w-full bg-white text-primary hover:bg-slate-50 border-none shadow-sm"
-                                onClick={() => navigate("/connected-accounts")}
-                            >
-                                <Plus className="w-4 h-4 mr-2" />
-                                Add New Source
-                            </Button>
-                            <p className="text-xs text-primary-foreground/70 text-center italic">
-                                More integrations coming soon
-                            </p>
-                        </div>
-                    </div>
+                {/* Quick Action */}
+                <Card className="bg-primary text-primary-foreground">
+                    <CardHeader>
+                        <CardTitle className="text-lg">Quick Start</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <p className="text-xs opacity-90">Add a new email account to begin syncing transactions.</p>
+                        <Button
+                            className="w-full bg-white text-primary hover:bg-slate-100 border-none font-semibold text-xs py-2"
+                            onClick={() => navigate("/connected-accounts")}
+                        >
+                            <Plus className="w-3 h-3 mr-2" />
+                            Add Account
+                        </Button>
+                    </CardContent>
                 </Card>
             </div>
 
-            <Card className="shadow-lg border-none bg-white overflow-hidden">
-                <CardHeader className="bg-slate-50/50">
-                    <CardTitle className="text-xl">Recent Activity</CardTitle>
+            <Card className="overflow-hidden">
+                <CardHeader className="bg-muted/30">
+                    <div className="flex items-center gap-2">
+                        <Activity className="w-4 h-4 text-muted-foreground" />
+                        <CardTitle className="text-lg">Recent Jobs</CardTitle>
+                    </div>
                 </CardHeader>
-                <CardContent className="h-48 flex items-center justify-center italic text-slate-400">
-                    No recent activity found. Connect an account to start syncing.
+                <CardContent className="h-48 flex flex-col items-center justify-center gap-2 p-12 text-center">
+                    <Zap className="h-8 w-8 text-muted-foreground opacity-20" />
+                    <p className="text-sm text-muted-foreground max-w-xs">No recent sync activity found. Connect an account to start processing data.</p>
+                    <Button variant="outline" size="sm" className="mt-4 text-xs" onClick={() => navigate("/connected-accounts")}>
+                        Configure Sources
+                    </Button>
                 </CardContent>
             </Card>
         </div>

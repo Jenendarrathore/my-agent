@@ -57,7 +57,8 @@ class JobRunner:
         job_class: Type[BaseJob], 
         job_type: str, 
         input_payload: Dict[str, Any],
-        triggered_by: str = "SYSTEM"
+        triggered_by: str = "SYSTEM",
+        user_id: Optional[int] = None
     ) -> Job:
         """
         Creates a job record and executes the job lifecycle.
@@ -67,6 +68,7 @@ class JobRunner:
             job_type=job_type,
             input_payload=input_payload,
             triggered_by=triggered_by,
+            user_id=user_id,
             status="RUNNING"
         )
         await self.db.commit()

@@ -1,143 +1,136 @@
 import * as React from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { Button, Input, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "../components/ui";
-import { Eye, EyeOff, Loader2, UserPlus } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { ShieldCheck, Mail, Lock, User, Loader2, ArrowRight } from "lucide-react";
+import { Button, Input, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, useToast } from "../components/ui";
 
 export function Register() {
-    const [name, setName] = React.useState("");
-    const [username, setUsername] = React.useState("");
-    const [email, setEmail] = React.useState("");
-    const [password, setPassword] = React.useState("");
-    const [showPassword, setShowPassword] = React.useState(false);
-    const [error, setError] = React.useState("");
-    const [loading, setLoading] = React.useState(false);
+    const [formData, setFormData] = React.useState({
+        full_name: "",
+        username: "",
+        email: "",
+        password: "",
+    });
+    const [isLoading, setIsLoading] = React.useState(false);
     const navigate = useNavigate();
+    const { addToast } = useToast();
 
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError("");
-        setLoading(true);
-
+        setIsLoading(true);
         try {
-            const response = await fetch("/api/auth/register", {
+            const res = await fetch("/api/auth/register", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    name,
-                    username,
-                    primary_email: email,
-                    password,
+                    name: formData.full_name,
+                    username: formData.username,
+                    primary_email: formData.email,
+                    password: formData.password
                 }),
             });
 
-            if (!response.ok) {
-                const data = await response.json();
-                throw new Error(data.detail || "Registration failed");
+            if (res.ok) {
+                addToast("Account created successfully.", "success");
+                navigate("/login?registered=true");
+            } else {
+                const data = await res.json();
+                addToast(data.detail || "Registration failed.", "error");
             }
-
-            const data = await response.json();
-            localStorage.setItem("access_token", data.access_token);
-
-            // We might need to fetch user info after register or backend should return it
-            // Let's assume user needs to login or we fetch it. 
-            // Most of our routes expect 'user' in localStorage for UI display.
-            // For now, let's redirect to login to be safe, or optimize later.
-            navigate("/login?registered=true");
-        } catch (err: any) {
-            setError(err.message || "Failed to register");
+        } catch (err) {
+            addToast("Failed to connect to server.", "error");
         } finally {
-            setLoading(false);
+            setIsLoading(false);
         }
     };
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-slate-50 p-4">
-            <Card className="w-full max-w-md shadow-lg border-slate-200">
-                <CardHeader className="space-y-1">
-                    <div className="flex justify-center mb-2">
-                        <div className="p-3 bg-primary/10 rounded-full">
-                            <UserPlus className="w-6 h-6 text-primary" />
-                        </div>
+        <div className="min-h-screen flex items-center justify-center bg-background p-6">
+            <div className="w-full max-w-xl space-y-8 animate-in fade-in zoom-in-95 duration-500">
+                <div className="flex flex-col items-center text-center space-y-2">
+                    <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20 mb-4">
+                        <ShieldCheck className="w-7 h-7 text-primary-foreground" />
                     </div>
-                    <CardTitle className="text-3xl font-bold tracking-tight text-center">Create Account</CardTitle>
-                    <CardDescription className="text-center">
-                        Sign up to start tracking your finances automatically
-                    </CardDescription>
-                </CardHeader>
-                <form onSubmit={handleRegister}>
-                    <CardContent className="space-y-4">
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium leading-none">Full Name</label>
-                            <Input
-                                placeholder="John Doe"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                required
-                            />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
+                    <h1 className="text-3xl font-bold tracking-tight">Create Your Account</h1>
+                    <p className="text-muted-foreground">Start automating your financial data processing in minutes.</p>
+                </div>
+
+                <Card className="border-border shadow-xl">
+                    <CardHeader className="space-y-1">
+                        <CardTitle className="text-xl">Account Registration</CardTitle>
+                        <CardDescription>Enter your details below to set up your secure workspace.</CardDescription>
+                    </CardHeader>
+                    <form onSubmit={handleRegister}>
+                        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-8">
                             <div className="space-y-2">
-                                <label className="text-sm font-medium leading-none">Username</label>
-                                <Input
-                                    placeholder="johndoe"
-                                    value={username}
-                                    onChange={(e) => setUsername(e.target.value)}
-                                    required
-                                />
+                                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Full Name</label>
+                                <div className="relative">
+                                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                    <Input
+                                        className="pl-10 h-11"
+                                        placeholder="John Doe"
+                                        value={formData.full_name}
+                                        onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                                        required
+                                    />
+                                </div>
                             </div>
                             <div className="space-y-2">
-                                <label className="text-sm font-medium leading-none">Email</label>
-                                <Input
-                                    type="email"
-                                    placeholder="john@example.com"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    required
-                                />
+                                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Username</label>
+                                <div className="relative">
+                                    <ArrowRight className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                    <Input
+                                        className="pl-10 h-11"
+                                        placeholder="johndoe"
+                                        value={formData.username}
+                                        onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                                        required
+                                    />
+                                </div>
                             </div>
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium leading-none">Password</label>
-                            <div className="relative">
-                                <Input
-                                    type={showPassword ? "text" : "password"}
-                                    placeholder="••••••••"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    required
-                                    className="pr-10"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700"
-                                >
-                                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                </button>
+                            <div className="space-y-2 md:col-span-2">
+                                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Email Address</label>
+                                <div className="relative">
+                                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                    <Input
+                                        className="pl-10 h-11"
+                                        placeholder="user@example.com"
+                                        type="email"
+                                        value={formData.email}
+                                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                        required
+                                    />
+                                </div>
                             </div>
-                        </div>
-                        {error && <p className="text-sm font-medium text-destructive bg-destructive/10 p-2 rounded">{error}</p>}
-                    </CardContent>
-                    <CardFooter className="flex flex-col space-y-4">
-                        <Button className="w-full" type="submit" disabled={loading}>
-                            {loading ? (
-                                <>
-                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                    Creating account...
-                                </>
-                            ) : "Register"}
-                        </Button>
-                        <div className="text-center text-sm text-slate-500">
-                            Already have an account?{" "}
-                            <Link to="/login" className="text-primary font-medium hover:underline">
-                                Sign In
-                            </Link>
-                        </div>
-                    </CardFooter>
-                </form>
-            </Card>
+                            <div className="space-y-2 md:col-span-2">
+                                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Secure Password</label>
+                                <div className="relative">
+                                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                    <Input
+                                        className="pl-10 h-11"
+                                        placeholder="••••••••"
+                                        type="password"
+                                        value={formData.password}
+                                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                        required
+                                    />
+                                </div>
+                            </div>
+                        </CardContent>
+                        <CardFooter className="flex flex-col space-y-4 pb-8">
+                            <Button className="w-full h-11 font-bold tracking-tight" type="submit" disabled={isLoading}>
+                                {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                                Register Account
+                            </Button>
+                            <p className="text-center text-sm text-muted-foreground">
+                                Already possess an account?{" "}
+                                <Link to="/login" className="text-primary font-bold hover:underline underline-offset-4">
+                                    Sign in instead
+                                </Link>
+                            </p>
+                        </CardFooter>
+                    </form>
+                </Card>
+            </div>
         </div>
     );
 }

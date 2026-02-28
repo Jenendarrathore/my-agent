@@ -31,7 +31,9 @@ async def read_emails(
     current_user: User = Depends(get_current_user)
 ):
     service = EmailService(db)
-    return await service.list_user_emails(user_id=current_user.id, skip=skip, limit=limit)
+    # Admin can see all emails, regular user only their own
+    user_id = None if current_user.role.name == "admin" else current_user.id
+    return await service.list_user_emails(user_id=user_id, skip=skip, limit=limit)
 
 
 @router.get("/{email_id}", response_model=EmailRead)

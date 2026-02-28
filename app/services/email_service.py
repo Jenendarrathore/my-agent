@@ -20,7 +20,7 @@ class EmailService:
         db_obj = await crud.get_email_by_provider_id(self.db, user_id, provider, provider_message_id)
         return EmailRead.model_validate(db_obj) if db_obj else None
 
-    async def list_user_emails(self, user_id: int, skip: int = 0, limit: int = 100) -> List[EmailRead]:
+    async def list_user_emails(self, user_id: Optional[int] = None, skip: int = 0, limit: int = 100) -> List[EmailRead]:
         db_objs = await crud.get_emails_by_user(self.db, user_id, skip, limit)
         return [EmailRead.model_validate(obj) for obj in db_objs]
 

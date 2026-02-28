@@ -50,6 +50,7 @@ async def get_user_by_id(db: AsyncSession, user_id: int) -> Optional[User]:
 async def create_user(db: AsyncSession, user_in: UserRegister) -> User:
     role = await get_default_role(db)
     db_user = User(
+        name=user_in.name,
         username=user_in.username,
         primary_email=user_in.primary_email,
         password_hash=get_password_hash(user_in.password),

@@ -1,26 +1,26 @@
 import * as React from "react";
 import {
-    Activity,
+    RefreshCw,
     Search,
     Filter,
-    Calendar,
-    Clock,
+    ChevronRight,
     CheckCircle2,
     XCircle,
+    Clock,
     AlertCircle,
-    RotateCcw,
-    Eye,
-    ArrowUpDown
+    Info,
+    ArrowUpDown,
+    Database,
+    Fingerprint
 } from "lucide-react";
 import {
-    Card,
-    CardHeader,
-    CardContent,
-    Badge,
     Button,
     Input,
+    Card,
+    CardContent,
+    Badge,
     Dialog,
-    cn
+    useToast
 } from "../components/ui";
 
 interface Job {
@@ -31,6 +31,7 @@ interface Job {
     input_payload: any;
     output_payload: any;
     error_payload: any;
+    user_id: number | null;
     retry_count: number;
     started_at: string | null;
     finished_at: string | null;
@@ -40,293 +41,327 @@ interface Job {
 export function Jobs() {
     const [jobs, setJobs] = React.useState<Job[]>([]);
     const [loading, setLoading] = React.useState(true);
-    const [filterStatus, setFilterStatus] = React.useState<string>("");
-    const [filterType, setFilterType] = React.useState<string>("");
+    const [filterStatus, setFilterStatus] = React.useState<string>("all");
+    const [searchQuery, setSearchQuery] = React.useState("");
+    const [sortOrder, setSortOrder] = React.useState<'asc' | 'desc'>('desc');
     const [selectedJob, setSelectedJob] = React.useState<Job | null>(null);
-    const [sortField, setSortField] = React.useState<keyof Job>("created_at");
-    const [sortOrder, setSortOrder] = React.useState<"asc" | "desc">("desc");
+    const [user, setUser] = React.useState<any>(null);
+    const { addToast } = useToast();
+
+    React.useEffect(() => {
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+            try {
+                setUser(JSON.parse(storedUser));
+            } catch (e) {
+                console.error("Failed to parse user", e);
+            }
+        }
+    }, []);
+
+    const isAdmin = user?.role?.name === "admin";
 
     const fetchJobs = React.useCallback(async () => {
-        setLoading(true);
         try {
             const token = localStorage.getItem("access_token");
-            let url = `/api/v1/jobs/?limit=50`;
-            if (filterStatus) url += `&status=${filterStatus}`;
-            if (filterType) url += `&job_type=${filterType}`;
-
-            const res = await fetch(url, {
+            const res = await fetch("/api/v1/jobs/", {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            const data = await res.json();
-            setJobs(data);
+            if (res.ok) {
+                const data = await res.json();
+                setJobs(data);
+            }
         } catch (err) {
             console.error("Failed to fetch jobs", err);
         } finally {
             setLoading(false);
         }
-    }, [filterStatus, filterType]);
+    }, []);
 
     React.useEffect(() => {
         fetchJobs();
+        const interval = setInterval(fetchJobs, 5000);
+        return () => clearInterval(interval);
     }, [fetchJobs]);
 
-    const handleSort = (field: keyof Job) => {
-        if (sortField === field) {
-            setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-        } else {
-            setSortField(field);
-            setSortOrder("desc");
-        }
-    };
-
-    const sortedJobs = [...jobs].sort((a, b) => {
-        const valA = a[sortField];
-        const valB = b[sortField];
-
-        if (valA === null) return 1;
-        if (valB === null) return -1;
-
-        if (valA < valB) return sortOrder === "asc" ? -1 : 1;
-        if (valA > valB) return sortOrder === "asc" ? 1 : -1;
-        return 0;
-    });
-
-    const getStatusVariant = (status: string) => {
-        switch (status) {
-            case "SUCCESS": return "success";
-            case "FAILED": return "error";
-            case "RUNNING": return "info";
-            case "QUEUED": return "warning";
-            default: return "default";
+    const handleSync = async () => {
+        try {
+            const token = localStorage.getItem("access_token");
+            const res = await fetch("/api/v1/jobs/sync", {
+                method: "POST",
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.ok) {
+                addToast("Job synchronization initiated.", "success");
+                fetchJobs();
+            }
+        } catch (err) {
+            addToast("Failed to initiate sync.", "error");
         }
     };
 
     const getStatusIcon = (status: string) => {
-        switch (status) {
-            case "SUCCESS": return <CheckCircle2 className="w-3.5 h-3.5 mr-1" />;
-            case "FAILED": return <XCircle className="w-3.5 h-3.5 mr-1" />;
-            case "RUNNING": return <Activity className="w-3.5 h-3.5 mr-1 animate-spin" />;
-            case "QUEUED": return <Clock className="w-3.5 h-3.5 mr-1" />;
-            default: return <AlertCircle className="w-3.5 h-3.5 mr-1" />;
-        }
+        const s = status.toLowerCase();
+        if (s === 'success' || s === 'completed') return <CheckCircle2 className="w-4 h-4 text-emerald-500" />;
+        if (s === 'failed' || s === 'error') return <XCircle className="w-4 h-4 text-rose-500" />;
+        if (s === 'running') return <RefreshCw className="w-4 h-4 text-blue-500 animate-spin" />;
+        return <Clock className="w-4 h-4 text-slate-400" />;
     };
 
-    const formatDate = (dateStr: string | null) => {
-        if (!dateStr) return "N/A";
-        return new Date(dateStr).toLocaleString();
+    const getStatusBadge = (status: string) => {
+        const s = status.toLowerCase();
+        if (s === 'success' || s === 'completed') return <Badge variant="success">Completed</Badge>;
+        if (s === 'failed' || s === 'error') return <Badge variant="error">Failed</Badge>;
+        if (s === 'running') return <Badge variant="info">Running</Badge>;
+        return <Badge variant="default">{status}</Badge>;
     };
+
+    const formatJobType = (type: string) => {
+        return type
+            .replace(/([A-Z])/g, ' $1')
+            .replace(/_/g, ' ')
+            .replace(/^Job/, '')
+            .replace(/Job$/, '')
+            .trim()
+            .split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(' ');
+    };
+
+    const formatTime = (dateStr: string) => {
+        const date = new Date(dateStr);
+        return new Intl.DateTimeFormat('en-US', {
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+        }).format(date);
+    };
+
+    const getAccountId = (job: Job) => {
+        const payload = job.input_payload || {};
+        return payload.account_id || payload.connected_account_id || null;
+    };
+
+    const filteredJobs = jobs
+        .filter(job => filterStatus === "all" || job.status.toLowerCase() === filterStatus.toLowerCase())
+        .filter(job =>
+            job.job_type.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (job.error_payload && JSON.stringify(job.error_payload).toLowerCase().includes(searchQuery.toLowerCase()))
+        )
+        .sort((a, b) => {
+            const dateA = new Date(a.created_at).getTime();
+            const dateB = new Date(b.created_at).getTime();
+            return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+        });
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
-            <div className="flex justify-between items-end">
-                <div className="space-y-2">
-                    <h1 className="text-4xl font-bold tracking-tight text-slate-900 italic">Job Management</h1>
-                    <p className="text-slate-500 text-lg">Monitor and audit background tasks.</p>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="space-y-1">
+                    <h1 className="text-3xl font-bold tracking-tight text-foreground">Background Jobs</h1>
+                    <p className="text-muted-foreground">Monitor and manage asynchronous operations and data processing.</p>
                 </div>
-                <Button onClick={fetchJobs} variant="outline" size="sm" className="h-10">
-                    <RotateCcw className={cn("w-4 h-4 mr-2", loading && "animate-spin")} />
-                    Refresh
-                </Button>
+                <div className="flex items-center gap-2">
+                    <Button onClick={handleSync} className="font-semibold px-6">
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Run Sync Jobs
+                    </Button>
+                </div>
             </div>
 
-            <Card className="border-slate-200/60 shadow-xl shadow-slate-200/20 bg-white/50 backdrop-blur-sm overflow-hidden">
-                <CardHeader className="border-b border-slate-100 bg-slate-50/50">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div className="flex items-center gap-4 flex-1">
-                            <div className="relative flex-1 max-w-sm">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                <Input
-                                    placeholder="Search jobs..."
-                                    className="pl-10 bg-white border-slate-200 focus:ring-primary/20"
-                                />
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <Filter className="w-4 h-4 text-slate-400" />
+            <Card className="border-border/50">
+                <CardContent className="p-4">
+                    <div className="flex flex-col md:flex-row gap-4">
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Search jobs by type or error..."
+                                className="pl-10 h-10 border-muted"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 border border-input rounded-md px-3 h-10 bg-background">
+                                <Filter className="w-3.5 h-3.5 text-muted-foreground" />
                                 <select
-                                    className="bg-white border border-slate-200 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                    className="bg-transparent text-sm font-medium focus:outline-none cursor-pointer"
                                     value={filterStatus}
                                     onChange={(e) => setFilterStatus(e.target.value)}
                                 >
-                                    <option value="">All Statuses</option>
-                                    <option value="SUCCESS">Success</option>
-                                    <option value="FAILED">Failed</option>
-                                    <option value="RUNNING">Running</option>
-                                    <option value="QUEUED">Queued</option>
-                                </select>
-                                <select
-                                    className="bg-white border border-slate-200 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                                    value={filterType}
-                                    onChange={(e) => setFilterType(e.target.value)}
-                                >
-                                    <option value="">All Types</option>
-                                    <option value="run_email_fetch">Email Fetch</option>
-                                    <option value="run_email_extraction">Email Extraction</option>
+                                    <option value="all">All Statuses</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="running">Running</option>
+                                    <option value="success">Success</option>
+                                    <option value="failed">Failed</option>
                                 </select>
                             </div>
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-10 w-10"
+                                onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                            >
+                                <ArrowUpDown className="w-4 h-4" />
+                            </Button>
                         </div>
-                    </div>
-                </CardHeader>
-                <CardContent className="p-0">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="border-b border-slate-100 bg-slate-50/30">
-                                    <th
-                                        className="px-6 py-4 text-sm font-bold text-slate-600 cursor-pointer hover:text-primary transition-colors"
-                                        onClick={() => handleSort("id")}
-                                    >
-                                        <div className="flex items-center">
-                                            ID <ArrowUpDown className="w-3 h-3 ml-2 opacity-50" />
-                                        </div>
-                                    </th>
-                                    <th
-                                        className="px-6 py-4 text-sm font-bold text-slate-600 cursor-pointer hover:text-primary transition-colors"
-                                        onClick={() => handleSort("job_type")}
-                                    >
-                                        <div className="flex items-center">
-                                            Job Type <ArrowUpDown className="w-3 h-3 ml-2 opacity-50" />
-                                        </div>
-                                    </th>
-                                    <th className="px-6 py-4 text-sm font-bold text-slate-600">Status</th>
-                                    <th
-                                        className="px-6 py-4 text-sm font-bold text-slate-600 cursor-pointer hover:text-primary transition-colors"
-                                        onClick={() => handleSort("created_at")}
-                                    >
-                                        <div className="flex items-center">
-                                            Triggered <ArrowUpDown className="w-3 h-3 ml-2 opacity-50" />
-                                        </div>
-                                    </th>
-                                    <th className="px-6 py-4 text-sm font-bold text-slate-600">Duration</th>
-                                    <th className="px-6 py-4 text-sm font-bold text-slate-600 text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {loading && jobs.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
-                                            <div className="flex flex-col items-center gap-2">
-                                                <Activity className="w-8 h-8 animate-spin text-primary/40" />
-                                                <p>Loading jobs...</p>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ) : sortedJobs.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
-                                            <div className="flex flex-col items-center gap-2">
-                                                <AlertCircle className="w-8 h-8 text-slate-300" />
-                                                <p>No jobs found.</p>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    sortedJobs.map((job) => (
-                                        <tr key={job.id} className="hover:bg-slate-50/50 transition-colors group">
-                                            <td className="px-6 py-4 text-sm font-medium text-slate-900">#{job.id}</td>
-                                            <td className="px-6 py-4 text-sm text-slate-600">
-                                                <code className="bg-slate-100 px-2 py-1 rounded text-xs font-mono">
-                                                    {job.job_type}
-                                                </code>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <Badge variant={getStatusVariant(job.status)} className="font-bold">
-                                                    {getStatusIcon(job.status)}
-                                                    {job.status}
-                                                </Badge>
-                                            </td>
-                                            <td className="px-6 py-4 text-sm text-slate-500">
-                                                <div className="flex flex-col">
-                                                    <span className="flex items-center gap-1.5">
-                                                        <Calendar className="w-3 h-3" />
-                                                        {formatDate(job.created_at)}
-                                                    </span>
-                                                    <span className="text-xs text-slate-400 mt-1 italic">
-                                                        by {job.triggered_by}
-                                                    </span>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 text-sm text-slate-500">
-                                                {job.started_at && job.finished_at ? (
-                                                    <span className="flex items-center gap-1.5">
-                                                        <Clock className="w-3 h-3" />
-                                                        {Math.round((new Date(job.finished_at).getTime() - new Date(job.started_at).getTime()) / 1000)}s
-                                                    </span>
-                                                ) : job.started_at ? (
-                                                    <span className="text-blue-500 animate-pulse">Running...</span>
-                                                ) : "N/A"}
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => setSelectedJob(job)}
-                                                    className="opacity-0 group-hover:opacity-100 transition-opacity"
-                                                >
-                                                    <Eye className="w-4 h-4 mr-2" />
-                                                    View Details
-                                                </Button>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
                     </div>
                 </CardContent>
             </Card>
 
+            <div className="rounded-lg border border-border bg-card shadow-sm overflow-hidden">
+                <table className="w-full text-left text-sm">
+                    <thead className="bg-muted/50 text-muted-foreground font-medium border-b border-border">
+                        <tr>
+                            <th className="px-6 py-4">Job Reference</th>
+                            <th className="px-6 py-4">Status</th>
+                            {isAdmin && <th className="px-6 py-4">User</th>}
+                            <th className="px-6 py-4">Execution Time</th>
+                            <th className="px-6 py-4">Source ID</th>
+                            <th className="px-6 py-4 text-right">Operations</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                        {loading ? (
+                            <tr>
+                                <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground">
+                                    <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 opacity-50" />
+                                    <span className="text-xs uppercase tracking-wider font-semibold">Loading job history...</span>
+                                </td>
+                            </tr>
+                        ) : filteredJobs.length === 0 ? (
+                            <tr>
+                                <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground">
+                                    <Info className="w-6 h-6 mx-auto mb-2 opacity-50" />
+                                    No records found matching your criteria.
+                                </td>
+                            </tr>
+                        ) : (
+                            filteredJobs.map(job => {
+                                const accountId = getAccountId(job);
+                                return (
+                                    <tr key={job.id} className="hover:bg-muted/30 transition-colors group">
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2 rounded-md bg-secondary text-primary">
+                                                    <Fingerprint className="w-4 h-4" />
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="font-semibold text-foreground">{formatJobType(job.job_type)}</span>
+                                                    <span className="text-[10px] text-muted-foreground font-mono">#{job.id}</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-2">
+                                                {getStatusIcon(job.status)}
+                                                {getStatusBadge(job.status)}
+                                            </div>
+                                        </td>
+                                        {isAdmin && (
+                                            <td className="px-6 py-4">
+                                                <Badge variant="outline" className="font-mono text-[10px]">USR-{job.user_id || 'SYS'}</Badge>
+                                            </td>
+                                        )}
+                                        <td className="px-6 py-4 text-muted-foreground font-medium">
+                                            {formatTime(job.created_at)}
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            {accountId ? (
+                                                <div className="flex items-center gap-1.5 text-xs font-mono text-muted-foreground">
+                                                    <Database className="w-3 h-3" />
+                                                    ACC-{accountId}
+                                                </div>
+                                            ) : (
+                                                <span className="text-muted-foreground text-xs italic">System</span>
+                                            )}
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => setSelectedJob(job)}
+                                                className="font-semibold text-xs h-8"
+                                            >
+                                                Inspect <ChevronRight className="w-3 h-3 ml-1" />
+                                            </Button>
+                                        </td>
+                                    </tr>
+                                );
+                            })
+                        )}
+                    </tbody>
+                </table>
+            </div>
+
             <Dialog
                 isOpen={!!selectedJob}
                 onClose={() => setSelectedJob(null)}
-                title={`Job Details: #${selectedJob?.id}`}
+                title={`Job Inspector [ID:${selectedJob?.id}]`}
             >
                 {selectedJob && (
                     <div className="space-y-6">
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1">
-                                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Type</label>
-                                <p className="text-sm font-semibold">{selectedJob.job_type}</p>
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Type</label>
+                                <div className="p-2 rounded-md bg-muted/50 border border-border text-sm font-semibold">
+                                    {selectedJob.job_type}
+                                </div>
                             </div>
                             <div className="space-y-1">
-                                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Trigger</label>
-                                <p className="text-sm font-semibold">{selectedJob.triggered_by}</p>
-                            </div>
-                            <div className="space-y-1">
-                                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Created</label>
-                                <p className="text-sm">{formatDate(selectedJob.created_at)}</p>
-                            </div>
-                            <div className="space-y-1">
-                                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Status</label>
-                                <div>
-                                    <Badge variant={getStatusVariant(selectedJob.status)}>
-                                        {selectedJob.status}
-                                    </Badge>
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Status</label>
+                                <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50 border border-border">
+                                    {getStatusIcon(selectedJob.status)}
+                                    <span className="text-sm font-semibold capitalize">{selectedJob.status}</span>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="space-y-2">
-                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Input Payload</label>
-                            <pre className="bg-slate-900 text-slate-50 p-4 rounded-lg text-xs overflow-x-auto font-mono">
-                                {JSON.stringify(selectedJob.input_payload, null, 2)}
-                            </pre>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Created</label>
+                                <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50 border border-border text-xs font-medium">
+                                    <Clock className="w-3 h-3" />
+                                    {new Date(selectedJob.created_at).toLocaleString()}
+                                </div>
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Retry Count</label>
+                                <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50 border border-border text-xs font-medium">
+                                    <RefreshCw className="w-3 h-3" />
+                                    {selectedJob.retry_count}
+                                </div>
+                            </div>
                         </div>
 
-                        {selectedJob.output_payload && (
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Output Result</label>
-                                <pre className="bg-slate-900 text-blue-300 p-4 rounded-lg text-xs overflow-x-auto font-mono">
-                                    {JSON.stringify(selectedJob.output_payload, null, 2)}
-                                </pre>
+                        {selectedJob.error_payload && (
+                            <div className="p-4 rounded-md bg-rose-50 border border-rose-100 dark:bg-rose-900/10 dark:border-rose-900/30 text-rose-700 dark:text-rose-400 space-y-2">
+                                <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider">
+                                    <AlertCircle className="w-4 h-4" />
+                                    Error Details
+                                </div>
+                                <div className="p-4 rounded-md bg-slate-900 text-rose-400 font-mono text-[11px] overflow-auto max-h-48 border border-border shadow-inner">
+                                    <pre>{JSON.stringify(selectedJob.error_payload, null, 2)}</pre>
+                                </div>
                             </div>
                         )}
 
-                        {selectedJob.error_payload && (
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider text-red-400">Error Payload</label>
-                                <pre className="bg-red-950 text-red-200 p-4 rounded-lg text-xs overflow-x-auto font-mono border border-red-900">
-                                    {JSON.stringify(selectedJob.error_payload, null, 2)}
-                                </pre>
+                        <div className="space-y-3">
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Input Parameters</label>
+                            <div className="p-4 rounded-md bg-slate-900 text-slate-300 font-mono text-[11px] overflow-auto max-h-48 border border-border shadow-inner">
+                                <pre>{JSON.stringify(selectedJob.input_payload, null, 2)}</pre>
+                            </div>
+                        </div>
+
+                        {selectedJob.output_payload && (
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Output Results</label>
+                                <div className="p-4 rounded-md bg-slate-900 text-emerald-400 font-mono text-[11px] overflow-auto max-h-48 border border-border shadow-inner">
+                                    <pre>{JSON.stringify(selectedJob.output_payload, null, 2)}</pre>
+                                </div>
                             </div>
                         )}
                     </div>

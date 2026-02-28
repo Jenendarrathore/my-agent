@@ -4,6 +4,7 @@ import { Dashboard } from "./pages/Dashboard";
 import { Register } from "./pages/Register";
 import { ConnectedAccounts } from "./pages/ConnectedAccounts";
 import { Jobs } from "./pages/Jobs";
+import { Emails } from "./pages/Emails";
 import { MainLayout } from "./components/MainLayout";
 
 // Protected Route Wrapper
@@ -59,6 +60,7 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/connected-accounts" element={<ConnectedAccounts />} />
           <Route path="/jobs" element={<Jobs />} />
+          <Route path="/emails" element={<Emails />} />
           {/* Add more protected routes here */}
         </Route>
 

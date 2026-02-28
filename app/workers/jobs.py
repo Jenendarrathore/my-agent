@@ -6,7 +6,7 @@ async def run_email_fetch(ctx, user_id: int, provider: str = "gmail", limit: int
     async with AsyncSessionLocal() as db:
         runner = JobRunner(db)
         payload = {"user_id": user_id, "provider": provider, "limit": limit, "account_id": account_id}
-        await runner.run_job(EmailFetchJob, "EMAIL_FETCH", payload, triggered_by="system")
+        await runner.run_job(EmailFetchJob, "EMAIL_FETCH", payload, triggered_by="system", user_id=user_id)
 
 async def run_email_extraction(ctx, batch_size: int = 10):
     """ARQ Task: Extract data from pending emails."""

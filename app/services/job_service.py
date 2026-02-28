@@ -26,9 +26,10 @@ class JobService:
         skip: int = 0, 
         limit: int = 100,
         status: Optional[str] = None,
-        job_type: Optional[str] = None
+        job_type: Optional[str] = None,
+        user_id: Optional[int] = None
     ) -> List[JobRead]:
-        db_objs = await crud.get_jobs(self.db, skip, limit, status, job_type)
+        db_objs = await crud.get_jobs(self.db, skip, limit, status, job_type, user_id)
         return [JobRead.model_validate(obj) for obj in db_objs]
 
     async def update_job(self, id: int, job_in: JobUpdate) -> Optional[JobRead]:

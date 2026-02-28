@@ -1,9 +1,11 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --background: 0 0% 100%;
+  --background: 210 40% 98%;
   --foreground: 222.2 84% 4.9%;
   --card: 0 0% 100%;
   --card-foreground: 222.2 84% 4.9%;
@@ -51,7 +53,31 @@
   * {
     @apply border-border;
   }
+
   body {
-    @apply bg-background text-foreground font-sans;
+    @apply bg-background text-foreground font-['Inter'] selection:bg-primary/30;
   }
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-card/50 backdrop-blur-md border border-border/50 shadow-sm;
+  }
+
+  .glass-dark {
+    @apply bg-slate-900/50 backdrop-blur-sm border border-slate-800/50;
+  }
+}
+
+/* Custom Scrollbar - Minimalist */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-300 dark:bg-slate-800 rounded-full hover:bg-slate-400 dark:hover:bg-slate-700 transition-colors;
 }
