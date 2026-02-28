@@ -1,9 +1,9 @@
 import uvicorn
-from app.routes.user import router as user_router
+from .api import router
 from app.core.setup import create_application
 
 # Bootstrap the application using the centralized setup function
-app = create_application(router=user_router)
+app = create_application(router=router)
 
 @app.get("/")
 async def health_check():

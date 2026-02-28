@@ -6,7 +6,8 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
-
+import importlib
+import pkgutil
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
@@ -20,6 +21,16 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 from app.models.user import Base # Import base here
 from app.core.config import settings
+
+def import_models(package_name):
+    package = importlib.import_module(package_name)
+    for _, module_name, _ in pkgutil.walk_packages(package.__path__, package.__name__ + "."):
+        importlib.import_module(module_name)
+
+# Load all models dynamically
+import_models("app.models")
+#  we can load models from other folders as well eg  is below 
+# import_models("app.core.database")
 
 target_metadata = Base.metadata
 

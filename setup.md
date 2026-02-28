@@ -13,7 +13,8 @@ The project is organized to ensure a strict separation between infrastructure (h
 | **`app/core/worker/`** | Specialized configurations for background worker processes. | ARQ Settings |
 | **`app/models/`** | Async SQLAlchemy table definitions. | SQLAlchemy 2.0 |
 | **`app/schemas/`** | Data validation and API serialization. | Pydantic V2 |
-| **`app/services/`** | Reusable business logic (domain layer). | Python Async |
+| **`app/services/`** | Reusable business logic & Orchestration (brain). | Python Async |
+| **`app/crud/`** | Pure database operations (data access). | SQLAlchemy |
 | **`app/workers/`** | Background job logic (functions). | ARQ Jobs |
 
 ---
